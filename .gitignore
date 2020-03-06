@@ -2,3 +2,4 @@ env/
 photos/
 *.dcm
 *.jpg
+!0002.dcm
