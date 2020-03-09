@@ -3,6 +3,7 @@
 import math
 import os
 import tkinter as tk
+from PIL import Image, ImageTk
 
 import pydicom
 import numpy as np
@@ -42,13 +43,29 @@ def radon(img, num_detectors, angular_step, theta, plt):
     return sinogram
 
 
-def load_image(path):
-    if path.endswith('.dcm'):
-        dcm_source = pydicom.dcmread(path)
-        plt.imshow(dcm_source.pixel_array[0])
-        plt.show()
-        return dcm_source.pixel_array[0]
-    return cv2.imread(path)
+def load_image(path, root):
+    '''Load .dcm or other image from path and displays it'''
+
+    try:
+        img = None
+        if path.endswith('.dcm'):
+            dcm_source = pydicom.dcmread(path)
+            img = Image.fromarray(np.uint8(dcm_source.pixel_array[0] * 255))
+        else:
+            img = Image.open(path)
+
+        width, height = img.size
+        img = ImageTk.PhotoImage(img)
+
+        img_label = tk.Label(root, text="Original image")
+        img_label.place(relx=0.02, rely=0.10)
+        img_widget = tk.Label(root, image=img)
+        img_widget.place(relx=0.25, rely=0.10, width=width, height=height)
+
+        print('Image Loaded')
+        root.mainloop()
+    except Exception as e:
+        print(e)
 
 
 def dropdown(root):
@@ -66,13 +83,13 @@ def dropdown(root):
 
     drop_menu = tk.OptionMenu(root, file, *files_list)
     # drop_menu.pack()
-    drop_menu.place(relx=0.2, rely=0.03)
+    drop_menu.place(relx=0.25, rely=0.03)
     drop_menu.config(width=30)
 
     load_btn = tk.Button(
         root,
         text="Load Image",
-        command=lambda: load_image(file.get())
+        command=lambda: load_image(file.get(), root)
         )
     load_btn.place(relx=0.8, rely=0.03)
 
