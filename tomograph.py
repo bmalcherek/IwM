@@ -8,20 +8,18 @@ from PIL import Image, ImageTk
 import pydicom
 import numpy as np
 import cv2
-import matplotlib.pyplot as plt
 
 from skimage.draw import line
-from pydicom.pixel_data_handlers import gdcm_handler, pillow_handler
 
 def radon(img, num_detectors, angular_step, theta, plt):
     height, width = img.shape
     height = height
     width = width
     radius = width / 2 if width < height else height / 2
-   
+
     x_offset = math.floor(width / 2)
     y_offset = math.floor(height / 2)
-   
+
     num_steps = math.floor((2 * math.pi) / angular_step)
 
     sinogram = np.empty([num_steps, num_detectors])
@@ -54,6 +52,7 @@ def load_image(path, root):
         else:
             img = Image.open(path)
 
+        img = img.resize((200, 200))
         width, height = img.size
         img = ImageTk.PhotoImage(img)
 
@@ -97,6 +96,7 @@ def dropdown(root):
 
 
 def window_setup():
+    '''Root setup and call other widgets initialization functions'''
     root = tk.Tk()
     root.title('TOMOGRAPH')
     root.geometry('1000x1000')
@@ -114,7 +114,7 @@ def main():
     # r = radon(image, 180, math.pi/90, math.pi, plt)
     # plt.imshow(r, cmap=plt.cm.bone)
     # plt.show()
-    root = window_setup()
+    window_setup()
 
 
 if __name__ == '__main__':
