@@ -121,13 +121,14 @@ class Sinogram:
                 output_image[rr, cc] += filtered_sinogram[iteration, detector]
 
 
-        print(np.min(output_image))
-        plt.imshow(output_image, cmap=plt.cm.gray)
+        # output_image = (output_image - np.min(output_image)) / (np.max(output_image) - np.min(output_image)) 
+        # print(np.min(output_image), np.max(output_image))
+        plt.imshow(output_image, cmap=plt.cm.bone)
         plt.show()
 
 
 
 
-sin = Sinogram(cv2.imread('logan.jpg'), 180, 180, math.pi)
+sin = Sinogram(cv2.imread('logan.png'), 720, 360, math.pi)
 sin.gen_sinogram()
 sin.gen_backprojection()
