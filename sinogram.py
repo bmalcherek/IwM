@@ -52,26 +52,30 @@ class Sinogram:
         sinogram = np.zeros((self.num_steps, self.num_detectors))
 
         filter = self._generate_filter(self.num_detectors)
-        angular_step = np.pi * 2 / self.num_steps
+        angular_step = np.pi / self.num_steps
 
         for step in range(self.num_steps):
+            #obliczenie kąta zerowego emitera
             alpha = step * angular_step
 
             step_lines = []
             sinogram_row = np.zeros((self.num_detectors), dtype=np.int32)
             for detector in range(self.num_detectors):
+                #obliczenie pozycji kolejnego detektora
                 detector_angle = alpha + np.pi - self.theta / 2 + detector * (self.theta / (self.num_detectors - 1))
                 detector_x, detector_y = self._get_coords(detector_angle)
-
+                #obliczenie pozycji odpowiadającego emitera
                 emitter_angle = alpha + self.theta / 2 - detector * (self.theta / (self.num_detectors - 1))
                 emitter_x, emitter_y = self._get_coords(emitter_angle)
-
+                #wygenerowanie linii
                 rr, cc = bresenham(emitter_y, emitter_x, detector_y, detector_x)
+                #zsumowanie wartości pikseli oraz zapisanie linii do użycia w rekonstrukcji
                 sinogram_row[detector] = np.array(self.image[rr, cc]).sum()
                 step_lines.append((rr, cc))
             
             sinogram[step] = sinogram_row
-
+            
+            #filtruj wiersz sinogramu
             if self.filter:
                 sinogram_row = np.array(np.convolve(sinogram_row, filter, 'same'), dtype=np.int32)
             
