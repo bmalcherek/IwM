@@ -215,17 +215,17 @@ def save_to_dicom(path, result, patient_data):
     path = f"./results/{path.split('/')[-1].split('.')[0]}.dcm"
 
     filename = get_testdata_files('CT_small.dcm')[0]
-    output_dcm_file = pydicom.dcmread(filename)
-    output_dcm_file.PatientName = patient_data['name'].get()
-    output_dcm_file.StudyDate = patient_data['date'].get()
-    output_dcm_file.StudyDescription = patient_data['description'].get("1.0", tk.END)
-    output_dcm_file.Rows = result.shape[0]
-    output_dcm_file.Columns = result.shape[1]
+    template_file = pydicom.dcmread(filename)
+    template_file.PatientName = patient_data['name'].get()
+    template_file.StudyDate = patient_data['date'].get()
+    template_file.StudyDescription = patient_data['description'].get("1.0", tk.END)
+    template_file.Rows = result.shape[0]
+    template_file.Columns = result.shape[1]
     result_dcm = result * 1024
     np.round(result_dcm, decimals=0, out=result_dcm)
     result_dcm = result_dcm.astype('int16')
-    output_dcm_file.PixelData = result_dcm.tobytes()
-    output_dcm_file.save_as(path)
+    template_file.PixelData = result_dcm.tobytes()
+    template_file.save_as(path)
 
 
 def save_to_dicom_widgets(root, path, result, patient_data):
