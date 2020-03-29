@@ -1,6 +1,5 @@
 import cv2
 from skimage.draw import line as bresenham
-import math
 import numpy as np
 
 class Sinogram:
@@ -22,8 +21,8 @@ class Sinogram:
         self._generate()
 
     def _get_coords(self, alpha):
-        x = int(math.cos(alpha) * self.radius) + self.offset
-        y = -int(math.sin(alpha) * self.radius) + self.offset
+        x = int(np.cos(alpha) * self.radius) + self.offset
+        y = -int(np.sin(alpha) * self.radius) + self.offset
         return x, y
 
     
@@ -42,7 +41,7 @@ class Sinogram:
         sinogram = np.zeros((self.num_steps, self.num_detectors))
 
         filter = self._generate_filter(self.num_detectors)
-        angular_step = math.pi * 2 / self.num_steps
+        angular_step = np.pi * 2 / self.num_steps
 
         for step in range(self.num_steps):
             alpha = step * angular_step
@@ -50,7 +49,7 @@ class Sinogram:
             step_lines = []
             sinogram_row = np.zeros((self.num_detectors), dtype=np.int32)
             for detector in range(self.num_detectors):
-                detector_angle = alpha + math.pi - self.theta / 2 + detector * (self.theta / (self.num_detectors - 1))
+                detector_angle = alpha + np.pi - self.theta / 2 + detector * (self.theta / (self.num_detectors - 1))
                 detector_x, detector_y = self._get_coords(detector_angle)
 
                 emitter_angle = alpha + self.theta / 2 - detector * (self.theta / (self.num_detectors - 1))
@@ -93,7 +92,7 @@ class Sinogram:
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
     img = cv2.imread('images/shepp.jpg', 0)
-    sin = Sinogram(image=img, num_steps=180, num_detectors=180, theta=math.pi)
+    sin = Sinogram(image=img, num_steps=180, num_detectors=180, theta=np.pi)
     print(sin.get_rmse())
     b = sin.get_backprojection()
     plt.imshow(b, cmap=plt.cm.bone)
