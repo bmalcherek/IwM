@@ -6,7 +6,8 @@ import math
 from PIL import Image, ImageTk
 
 import pydicom
-from pydicom.dataset import Dataset
+from pydicom.data import get_testdata_files
+from pydicom.tag import Tag
 import numpy as np
 import cv2
 
@@ -42,7 +43,7 @@ def load_image(root, path):
         img_widget = tk.Label(root, image=imgtk)
         img_widget.place(relx=0.25, rely=0.10, width=width, height=height)
 
-        sinogram_settings(root, img)
+        sinogram_settings(root, img, path, patient_data)
 
         root.mainloop()
     except Exception as e:
@@ -88,15 +89,12 @@ def patient_data_widgets(root):
     date_entry = tk.Entry(root, textvariable=date)
     date_entry.place(relx=0.63, rely=0.14)
 
-    # description = tk.StringVar(root)
     description_label = tk.Label(root, text='Description:')
     description_label.place(relx=0.55, rely=0.18)
     description_entry = tk.Text(root, width=40, height=6)
     description_entry.place(relx=0.63, rely=0.18)
 
     patient_data = {
-        # 'first_name': first_name_entry,
-        # 'last_name': last_name_entry,
         'name': name,
         'date': date,
         'description': description_entry
@@ -111,7 +109,7 @@ def only_numbers(char):
     return char.isdigit()
 
 
-def sinogram_settings(root, img_path):
+def sinogram_settings(root, img_path, path, patient_data):
     radon_filter = tk.BooleanVar(root)
     filter_check = tk.Checkbutton(root, text="Filter", variable=radon_filter)
     filter_check.select()
@@ -166,7 +164,9 @@ def sinogram_settings(root, img_path):
             radon_gauss,
             radon_steps,
             radon_detectors,
-            radon_theta
+            radon_theta,
+            path,
+            patient_data
             )
     )
     start_btn.place(relx=0.705, rely=0.368)
@@ -179,7 +179,7 @@ def update_iradon_image(iradon_img, idx, iradon_all):
     iradon_img.image = iradon_all[idx.get()]
 
 
-def sinogram(root, img, filter_, gauss, steps, detectors, theta):
+def sinogram(root, img, filter_, gauss, steps, detectors, theta, path, patient_data):
     sin = Sinogram(
         image=img,
         num_steps=int(steps.get()),
@@ -216,34 +216,34 @@ def sinogram(root, img, filter_, gauss, steps, detectors, theta):
         )
     slider.place(relx=0.5, rely=0.79)
 
-    # save_to_dicom_widgets(root)
+    result = sin.get_backprojection()
+    save_to_dicom_widgets(root, path, result, patient_data)
 
     root.mainloop()
 
 
-def save_to_dicom():
-    tmp_img = cv2.imread('./images/ct.jpg')
+def save_to_dicom(path, result, patient_data):
+    path = f"./results/{path.split('/')[-1].split('.')[0]}.dcm"
 
-    file_meta = Dataset()
-    file_meta.MediaStorageSOPClassUID = '1.2.840.10008.5.1.4.1.1.2'
-    file_meta.MediaStorageSOPInstanceUID = "1.2.3"
-    file_meta.ImplementationClassUID = "1.2.3.4"
+    filename = get_testdata_files('CT_small.dcm')[0]
+    output_dcm_file = pydicom.dcmread(filename)
+    output_dcm_file.PatientName = patient_data['name'].get()
+    output_dcm_file.StudyDate = patient_data['date'].get()
+    output_dcm_file.StudyDescription = patient_data['description'].get()
+    output_dcm_file.Rows = result.shape[0]
+    output_dcm_file.Columns = result.shape[1]
+    result_dcm = result * 1024
+    np.round(result_dcm, decimals=0, out=result_dcm)
+    result_dcm = result_dcm.astype('int16')
+    output_dcm_file.PixelData = result_dcm.tobytes()
+    output_dcm_file.save_as(path)
 
-    ds.PatientName = 'John Doe'
-    # ds.pixel_array = tmp_img
-    ds.PixelData = tmp_img
-    ds.is_little_endian = True
-    ds.is_implicit_VR = True
-    ds.save_as('./images/test.dcm')
 
-    # print('Hello from Save')
-
-
-def save_to_dicom_widgets(root):
+def save_to_dicom_widgets(root, path, result, patient_data):
     save_btn = tk.Button(
         root,
         text='SAVE',
-        command=lambda: save_to_dicom(),
+        command=lambda: save_to_dicom(path, result, patient_data),
         width=20,
         height=6
     )
@@ -258,8 +258,6 @@ def window_setup():
     root.geometry('1000x800')
 
     dropdown(root)
-    save_to_dicom_widgets(root)
-    # sinogram_settings(root, image_path)
 
     root.mainloop()
 
