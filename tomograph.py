@@ -6,9 +6,9 @@ import math
 from PIL import Image, ImageTk
 
 import pydicom
+from pydicom.dataset import Dataset
 import numpy as np
 import cv2
-import matplotlib.pyplot as plt
 
 from sinogram import Sinogram
 
@@ -26,7 +26,7 @@ def load_image(root, path):
             patient_data['name'].set(dcm_source.PatientName)
             patient_data['date'].set(dcm_source.StudyDate)
             patient_data['description'].insert(tk.END, dcm_source.StudyDescription)
-            img = Image.fromarray(np.uint8(dcm_source.pixel_array[0] * 255))            
+            img = Image.fromarray(np.uint8(dcm_source.pixel_array[0] * 255))           
         else:
             img = cv2.imread(path)
             img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
@@ -216,7 +216,38 @@ def sinogram(root, img, filter_, gauss, steps, detectors, theta):
         )
     slider.place(relx=0.5, rely=0.79)
 
+    # save_to_dicom_widgets(root)
+
     root.mainloop()
+
+
+def save_to_dicom():
+    tmp_img = cv2.imread('./images/ct.jpg')
+
+    file_meta = Dataset()
+    file_meta.MediaStorageSOPClassUID = '1.2.840.10008.5.1.4.1.1.2'
+    file_meta.MediaStorageSOPInstanceUID = "1.2.3"
+    file_meta.ImplementationClassUID = "1.2.3.4"
+
+    ds.PatientName = 'John Doe'
+    # ds.pixel_array = tmp_img
+    ds.PixelData = tmp_img
+    ds.is_little_endian = True
+    ds.is_implicit_VR = True
+    ds.save_as('./images/test.dcm')
+
+    # print('Hello from Save')
+
+
+def save_to_dicom_widgets(root):
+    save_btn = tk.Button(
+        root,
+        text='SAVE',
+        command=lambda: save_to_dicom(),
+        width=20,
+        height=6
+    )
+    save_btn.place(relx=0.75, rely=0.75)
 
 
 def window_setup():
@@ -227,6 +258,7 @@ def window_setup():
     root.geometry('1000x800')
 
     dropdown(root)
+    save_to_dicom_widgets(root)
     # sinogram_settings(root, image_path)
 
     root.mainloop()
