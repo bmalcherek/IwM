@@ -92,7 +92,7 @@ class Sinogram:
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
     img = cv2.imread('images/shepp.jpg', 0)
-    sin = Sinogram(image=img, num_steps=180, num_detectors=180, theta=np.pi)
+    sin = Sinogram(image=img, num_steps=360, num_detectors=360, theta=np.pi)
     print(sin.get_rmse())
     b = sin.get_backprojection()
     plt.imshow(b, cmap=plt.cm.bone)
