@@ -22,18 +22,21 @@ def load_image(root, path):
             dcm_source = pydicom.dcmread(path)
             img = Image.fromarray(np.uint8(dcm_source.pixel_array[0] * 255))
         else:
-            img = Image.open(path)
+            img = cv2.imread(path)
+            img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+            img = Image.fromarray(img)
 
         img = img.resize((200, 200))
         width, height = img.size
-        img = ImageTk.PhotoImage(img)
+        imgtk = ImageTk.PhotoImage(img)
+        img = np.array(img)
 
         img_label = tk.Label(root, text="Original image")
         img_label.place(relx=0.02, rely=0.10)
-        img_widget = tk.Label(root, image=img)
+        img_widget = tk.Label(root, image=imgtk)
         img_widget.place(relx=0.25, rely=0.10, width=width, height=height)
 
-        sinogram_settings(root, path)
+        sinogram_settings(root, img)
 
         root.mainloop()
     except Exception as e:
@@ -140,9 +143,7 @@ def update_iradon_image(iradon_img, idx, iradon_all):
     iradon_img.image = iradon_all[idx.get()]
 
 
-def sinogram(root, img_path, filter_, gauss, steps, detectors, theta):
-    img = cv2.imread(img_path, 0)
-
+def sinogram(root, img, filter_, gauss, steps, detectors, theta):
     sin = Sinogram(
         image=img,
         num_steps=int(steps.get()),
