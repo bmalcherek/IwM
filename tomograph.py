@@ -229,7 +229,7 @@ def save_to_dicom(path, result, patient_data):
     output_dcm_file = pydicom.dcmread(filename)
     output_dcm_file.PatientName = patient_data['name'].get()
     output_dcm_file.StudyDate = patient_data['date'].get()
-    output_dcm_file.StudyDescription = patient_data['description'].get()
+    output_dcm_file.StudyDescription = patient_data['description'].get("1.0", tk.END)
     output_dcm_file.Rows = result.shape[0]
     output_dcm_file.Columns = result.shape[1]
     result_dcm = result * 1024
