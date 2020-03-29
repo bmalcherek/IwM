@@ -17,10 +17,16 @@ def load_image(root, path):
     '''Load .dcm or other image from path and displays it'''
 
     try:
+        patient_data = patient_data_widgets(root)
+
         img = None
         if path.endswith('.dcm'):
             dcm_source = pydicom.dcmread(path)
-            img = Image.fromarray(np.uint8(dcm_source.pixel_array[0] * 255))
+            print(dcm_source.StudyDescription)
+            patient_data['name'].set(dcm_source.PatientName)
+            patient_data['date'].set(dcm_source.StudyDate)
+            patient_data['description'].insert(tk.END, dcm_source.StudyDescription)
+            img = Image.fromarray(np.uint8(dcm_source.pixel_array[0] * 255))            
         else:
             img = cv2.imread(path)
             img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
@@ -64,9 +70,39 @@ def dropdown(root):
         text="Load Image",
         command=lambda: load_image(root, f'./images/{file.get()}')
         )
-    load_btn.place(relx=0.8, rely=0.03)
+    load_btn.place(relx=0.6, rely=0.03)
 
     return f'./images/{file.get()}'
+
+
+def patient_data_widgets(root):
+    name = tk.StringVar(root)
+    name_label = tk.Label(root, text='Name:')
+    name_label.place(relx=0.55, rely=0.1)
+    name_entry = tk.Entry(root, textvariable=name)
+    name_entry.place(relx=0.63, rely=0.1)
+
+    date = tk.StringVar(root)
+    date_label = tk.Label(root, text='Date:')
+    date_label.place(relx=0.55, rely=0.14)
+    date_entry = tk.Entry(root, textvariable=date)
+    date_entry.place(relx=0.63, rely=0.14)
+
+    # description = tk.StringVar(root)
+    description_label = tk.Label(root, text='Description:')
+    description_label.place(relx=0.55, rely=0.18)
+    description_entry = tk.Text(root, width=40, height=6)
+    description_entry.place(relx=0.63, rely=0.18)
+
+    patient_data = {
+        # 'first_name': first_name_entry,
+        # 'last_name': last_name_entry,
+        'name': name,
+        'date': date,
+        'description': description_entry
+    }
+
+    return patient_data
 
 
 def only_numbers(char):
