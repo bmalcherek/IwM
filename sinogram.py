@@ -6,14 +6,24 @@ import numpy as np
 class Sinogram:
 
     def __init__(self, image, *, num_detectors=180, num_steps=180, theta=np.pi, filter=True, gaussian=True):
-        self.image = image
+        h, w = image.shape
+        if h > w:
+            dy = int((h - w) / 2)
+            self.image = image[dy:dy+w, 0:w]
+        elif w > h:
+            dx = int((w - h) / 2)
+            self.image = image[0:h, dx:dx+h]
+        else:
+            self.image = image
+
+        assert(self.image.shape[0] == self.image.shape[1])
         self.num_detectors = num_detectors
         self.num_steps = num_steps
         self.theta = theta
         self.filter = filter
         self.gaussian = gaussian
 
-        self.width = int(image.shape[0])
+        self.width = self.image.shape[0]
         self.offset = int(self.width / 2)
         self.radius = int(self.width / 2) - 1
         
