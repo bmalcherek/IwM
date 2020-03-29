@@ -27,7 +27,7 @@ def load_image(root, path):
             patient_data['name'].set(dcm_source.PatientName)
             patient_data['date'].set(dcm_source.StudyDate)
             patient_data['description'].insert(tk.END, dcm_source.StudyDescription)
-            img = Image.fromarray(np.uint8(dcm_source.pixel_array[0] * 255))           
+            img = Image.fromarray(np.uint8(dcm_source.pixel_array * 255))           
         else:
             img = cv2.imread(path)
             img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
@@ -102,13 +102,6 @@ def patient_data_widgets(root):
 
     return patient_data
 
-
-def only_numbers(char):
-    #TODO get it to work
-    print(char)
-    return char.isdigit()
-
-
 def sinogram_settings(root, img_path, path, patient_data):
     radon_filter = tk.BooleanVar(root)
     filter_check = tk.Checkbutton(root, text="Filter", variable=radon_filter)
@@ -120,17 +113,13 @@ def sinogram_settings(root, img_path, path, patient_data):
     gauss_check.select()
     gauss_check.place(relx=0.15, rely=0.37)
 
-    validation = root.register(only_numbers)
-
     radon_steps_label = tk.Label(root, text="Steps:")
     radon_steps_label.place(relx=0.25, rely=0.37)
     radon_steps = tk.StringVar(root, value=180)
     radon_steps_input = tk.Entry(
         root,
         textvariable=radon_steps,
-        width=10,
-        validate='key',
-        validatecommand=(validation, '%S')
+        width=10
     )
     radon_steps_input.place(relx=0.29, rely=0.37)
 
