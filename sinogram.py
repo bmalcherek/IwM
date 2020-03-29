@@ -1,133 +1,100 @@
 import cv2
 from skimage.draw import line as bresenham
 import math
-import matplotlib.pyplot as plt
 import numpy as np
 
 class Sinogram:
-    def __init__(self, img, num_detectors, steps, theta):
-        self.img = img
+
+    def __init__(self, image, *, num_detectors, num_steps, theta, filter=True, gaussian=True):
+        self.image = image
         self.num_detectors = num_detectors
-        self.steps = steps
+        self.num_steps = num_steps
         self.theta = theta
+        self.filter = filter
+        self.gaussian = gaussian
 
-        self.width = img.shape[0]
-        self.radius = self.width / 2 - 1
-
+        self.width = int(image.shape[0])
         self.offset = int(self.width / 2)
+        self.radius = int(self.width / 2) - 1
         
-        self.gen_lines()
+        self.sinogram = np.zeros((self.num_steps, self.num_detectors), dtype=np.uint8)
+        self.backprojections = []
+        self._generate()
 
-    
-    def get_coords(self, alpha):
+    def _get_coords(self, alpha):
         x = int(math.cos(alpha) * self.radius) + self.offset
         y = -int(math.sin(alpha) * self.radius) + self.offset
         return x, y
 
     
-    def gen_lines(self):
-        self.scans = list()
+    def _generate_filter(self, length):
+        filter = [(-4/(np.pi**2))/(i**2) if i%2 != 0 else 0 for i in range(-int(length/2),int((length/2))+1)]
+        filter[int(length/2)] = 1  
+        return filter
 
-        # plt.imshow(self.img)
+    def _normalize_image(self, img):
+        img = np.clip(img, 0, None)
+        img = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX)
+        return np.array(img, dtype=np.uint8)
 
-        angular_step = math.pi * 2 / self.steps
-        for step in range(self.steps):
+    def _generate(self):
+        backprojection = np.zeros((self.width, self.width))
+        sinogram = np.zeros((self.num_steps, self.num_detectors))
+
+        filter = self._generate_filter(self.num_detectors)
+        angular_step = math.pi * 2 / self.num_steps
+
+        for step in range(self.num_steps):
             alpha = step * angular_step
 
-            step_lines = list()
+            step_lines = []
+            sinogram_row = np.zeros((self.num_detectors), dtype=np.int32)
             for detector in range(self.num_detectors):
                 detector_angle = alpha + math.pi - self.theta / 2 + detector * (self.theta / (self.num_detectors - 1))
-                detector_x, detector_y = self.get_coords(detector_angle)
+                detector_x, detector_y = self._get_coords(detector_angle)
 
                 emitter_angle = alpha + self.theta / 2 - detector * (self.theta / (self.num_detectors - 1))
-                emitter_x, emitter_y = self.get_coords(emitter_angle)
-
-                # plt.plot([emitter_x, detector_x], [emitter_y, detector_y], 'g-')
+                emitter_x, emitter_y = self._get_coords(emitter_angle)
 
                 rr, cc = bresenham(emitter_y, emitter_x, detector_y, detector_x)
+                sinogram_row[detector] = np.array(self.image[rr, cc]).sum()
                 step_lines.append((rr, cc))
             
+            sinogram[step] = sinogram_row
 
-            self.scans.append(step_lines)
+            if self.filter:
+                sinogram_row = np.array(np.convolve(sinogram_row, filter, 'same'), dtype=np.int32)
+            
 
-        # plt.show()
+            for detector in range(self.num_detectors):
+                rr, cc = step_lines[detector]
+                backprojection[rr, cc] += sinogram_row[detector]
 
-    def calc_filter(self, number_freq):
-        filtering_array = 2 * np.arange(number_freq + 1) / np.float32(2 * number_freq)
-        # w = 2 * np.pi * np.arange(number_freq + 1) / np.float32(2 * number_freq)
-        # filtering_array[1:] *= (1.0 + np.cos(w[1:])/2.0)
-        filtering_array = np.concatenate((filtering_array, filtering_array[number_freq - 1:0:-1]), axis=0)
+            if(self.gaussian):
+                self.backprojections.append(self._normalize_image(cv2.GaussianBlur(backprojection,(3,3),3)))
+            else:
+                self.backprojections.append(self._normalize_image(backprojection))
 
-        return filtering_array
-
-
-    def filter_projection(self, sinogram):
-
-        number_angles, number_offsets = sinogram.shape
-        number_freq = 2 * int(2**(int(np.ceil(np.log2(number_offsets)))))
-
-        filter_array = self.calc_filter(number_freq)
-
-        # print(sinogram)
-
-        padded_sinogram = np.concatenate((sinogram, np.zeros((number_angles, 2 * number_freq - number_offsets))), axis=1)
-
-        for i in range(number_angles):
-            padded_sinogram[i, :] = np.real(np.fft.ifft(np.fft.fft(padded_sinogram[i, :]) * filter_array))
-
-        # sinogram[:, :] = padded_sinogram[:, :number_offsets]
-
-        return padded_sinogram[:, :number_offsets]
+        self.sinogram = cv2.normalize(sinogram, None, 0, 255, cv2.NORM_MINMAX)
 
 
-    def gen_sinogram(self, iterations=None):
+    def get_backprojection_frames(self):
+        return self.backprojections
 
-        self.sinogram = np.zeros((self.steps, self.num_detectors), dtype=np.float64)
+    def get_backprojection(self):
+        return self.backprojections[-1]
 
-        iterations = self.steps if iterations is None else iterations
+    def get_sinogram(self):
+        return self.sinogram
 
-        for iteration, scan in enumerate(self.scans):
+    def get_rmse(self):
+        return np.sqrt(np.mean((self.image-self.backprojections[-1])**2))
 
-            if iteration == iterations - 1:
-                break
-
-            for detector, line in enumerate(scan):
-                rr, cc = line
-                # mean_brightness = np.array(self.img[rr, cc]).mean()
-                mean_brightness = np.array(self.img[rr, cc]).sum() / (255 * len(rr)) if len(rr) > 0 else 0
-                mean_brightness = np.exp(-mean_brightness)
-                self.sinogram[iteration, detector] = mean_brightness
-        
-
-        #normalize or sth
-        max_value = np.max(self.sinogram)
-        min_value = np.min(self.sinogram)
-        factor = 256 / (max_value - min_value)
-        self.sinogram -= min_value
-        self.sinogram *= factor
-        self.sinogram = np.full(np.shape(self.sinogram), 255) - self.sinogram
-
-        plt.imshow(self.sinogram, cmap=plt.cm.bone)
-        # plt.show()
-
-    
-    def gen_backprojection(self):
-        
-        output_image = np.zeros((self.width, self.width), dtype=np.float64)
-        filtered_sinogram = self.filter_projection(self.sinogram)
-        for iteration, scan in enumerate(self.scans):
-            for detector, line in enumerate(scan):
-                rr, cc = line
-                output_image[rr, cc] += filtered_sinogram[iteration, detector]
-
-
-        print(np.min(output_image))
-        plt.imshow(output_image, cmap=plt.cm.gray)
-        plt.show()
-
-
-
-
-sin = Sinogram(cv2.imread('logan.jpg'), 180, 180, math.pi)
-sin.gen_sinogram()
-sin.gen_backprojection()
+if __name__ == '__main__':
+    import matplotlib.pyplot as plt
+    img = cv2.imread('images/shepp.jpg', 0)
+    sin = Sinogram(image=img, num_steps=180, num_detectors=180, theta=math.pi)
+    print(sin.get_rmse())
+    b = sin.get_backprojection()
+    plt.imshow(b, cmap=plt.cm.bone)
+    plt.show()
