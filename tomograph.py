@@ -2,6 +2,7 @@
 
 import os
 import tkinter as tk
+import math
 from PIL import Image, ImageTk
 
 import pydicom
@@ -86,7 +87,7 @@ def sinogram_settings(root, img_path):
 
     radon_steps_label = tk.Label(root, text="Steps:")
     radon_steps_label.place(relx=0.25, rely=0.37)
-    radon_steps = tk.IntVar(root, value=180)
+    radon_steps = tk.StringVar(root, value=180)
     radon_steps_input = tk.Entry(
         root,
         textvariable=radon_steps,
@@ -98,13 +99,23 @@ def sinogram_settings(root, img_path):
 
     radon_detectors_label = tk.Label(root, text='Detectors:')
     radon_detectors_label.place(relx=0.385, rely=0.37)
-    radon_detectors = tk.IntVar(root, value=180)
+    radon_detectors = tk.StringVar(root, value=180)
     radon_detectors_input = tk.Entry(
         root,
         textvariable=radon_detectors,
         width=10
     )
     radon_detectors_input.place(relx=0.45, rely=0.37)
+
+    radon_theta_label = tk.Label(root, text="Theta:")
+    radon_theta_label.place(relx=0.54, rely=0.37)
+    radon_theta = tk.StringVar(root, value=180)
+    radon_theta_input = tk.Entry(
+        root,
+        textvariable=radon_theta,
+        width=10
+    )
+    radon_theta_input.place(relx=0.582, rely=0.37)
 
     start_btn = tk.Button(
         root,
@@ -115,10 +126,11 @@ def sinogram_settings(root, img_path):
             radon_filter,
             radon_gauss,
             radon_steps,
-            radon_detectors
+            radon_detectors,
+            radon_theta
             )
     )
-    start_btn.place(relx=0.6, rely=0.368)
+    start_btn.place(relx=0.705, rely=0.368)
 
     root.mainloop()
 
@@ -128,16 +140,14 @@ def update_iradon_image(iradon_img, idx, iradon_all):
     iradon_img.image = iradon_all[idx.get()]
 
 
-def sinogram(root, img_path, filter_, gauss, steps, detectors):
-    img = cv2.imread(img_path)
-    b, g, r = cv2.split(img)
-    img = cv2.merge((r, g, b))
+def sinogram(root, img_path, filter_, gauss, steps, detectors, theta):
+    img = cv2.imread(img_path, 0)
 
     sin = Sinogram(
         image=img,
         num_steps=int(steps.get()),
         num_detectors=int(detectors.get()),
-        theta=np.pi,
+        theta=math.radians(float(theta.get())),
         filter=filter_.get(),
         gaussian=gauss.get()
     )
