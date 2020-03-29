@@ -1,18 +1,29 @@
 import cv2
 from skimage.draw import line as bresenham
+from skimage.metrics import structural_similarity as ssim
 import numpy as np
 
 class Sinogram:
 
-    def __init__(self, image, *, num_detectors, num_steps, theta, filter=True, gaussian=True):
-        self.image = image
+    def __init__(self, image, *, num_detectors=180, num_steps=180, theta=np.pi, filter=True, gaussian=True):
+        h, w = image.shape
+        if h > w:
+            dy = int((h - w) / 2)
+            self.image = image[dy:dy+w, 0:w]
+        elif w > h:
+            dx = int((w - h) / 2)
+            self.image = image[0:h, dx:dx+h]
+        else:
+            self.image = image
+
+        assert(self.image.shape[0] == self.image.shape[1])
         self.num_detectors = num_detectors
         self.num_steps = num_steps
         self.theta = theta
         self.filter = filter
         self.gaussian = gaussian
 
-        self.width = int(image.shape[0])
+        self.width = self.image.shape[0]
         self.offset = int(self.width / 2)
         self.radius = int(self.width / 2) - 1
         
@@ -70,7 +81,7 @@ class Sinogram:
                 backprojection[rr, cc] += sinogram_row[detector]
 
             if(self.gaussian):
-                self.backprojections.append(self._normalize_image(cv2.GaussianBlur(backprojection,(3,3),3)))
+                self.backprojections.append(self._normalize_image(cv2.GaussianBlur(backprojection, (3,3), 3)))
             else:
                 self.backprojections.append(self._normalize_image(backprojection))
 
@@ -89,11 +100,5 @@ class Sinogram:
     def get_rmse(self):
         return np.sqrt(np.mean((self.image-self.backprojections[-1])**2))
 
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-    img = cv2.imread('images/shepp.jpg', 0)
-    sin = Sinogram(image=img, num_steps=360, num_detectors=360, theta=np.pi)
-    print(sin.get_rmse())
-    b = sin.get_backprojection()
-    plt.imshow(b, cmap=plt.cm.bone)
-    plt.show()
+    def get_ssim(self):
+        return ssim(self.image, self.backprojections[-1])
